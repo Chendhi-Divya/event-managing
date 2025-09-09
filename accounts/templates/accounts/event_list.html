@@ -1,0 +1,9 @@
+
+<h2>Events</h2>
+<ul>
+  {% for event in events %}
+    <li><a href="{% url 'event_detail' event.id %}">{{ event.title }}</a> - {{ event.event_date|date:"M d, Y H:i" }}</li>
+  {% empty %}
+    <li>No upcoming events.</li>
+  {% endfor %}
+</ul>
