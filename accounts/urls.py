@@ -15,6 +15,8 @@ urlpatterns = [
     path('events/<int:event_id>/', views.event_detail, name='event_detail'),  # Event detail
     path('events/<int:event_id>/register/', views.register_event, name='register_event'),  # Register for event
      path('register/<int:event_id>/', views.register_event, name='register_event'),
+     path('events/add/', views.add_event, name='add_event'),
+
 
     # Password reset URLs
     path("password-reset/",

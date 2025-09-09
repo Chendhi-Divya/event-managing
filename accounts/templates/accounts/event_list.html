@@ -1,9 +1,29 @@
-
-<h2>Events</h2>
-<ul>
-  {% for event in events %}
-    <li><a href="{% url 'event_detail' event.id %}">{{ event.title }}</a> - {{ event.event_date|date:"M d, Y H:i" }}</li>
-  {% empty %}
-    <li>No upcoming events.</li>
-  {% endfor %}
-</ul>
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-5">
+    <div class="bg-light p-5 rounded shadow" style="max-width:900px;margin:auto;">
+        <h2 class="mb-4 fw-bold">All Events</h2>
+        {% if events %}
+            <ul class="list-group">
+                {% for event in events %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center mb-3 shadow-sm rounded">
+                        <div>
+                            <a href="{% url 'event_detail' event.id %}" class="fw-bold text-decoration-none">
+                                {{ event.title }}
+                            </a>
+                            <div class="text-secondary small">
+                                {{ event.event_date|date:"M d, Y H:i" }}
+                            </div>
+                        </div>
+                        <a href="{% url 'event_detail' event.id %}" class="btn btn-outline-primary btn-sm">View</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="alert alert-info text-center mb-0">
+                No upcoming events.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
