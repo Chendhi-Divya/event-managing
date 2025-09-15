@@ -9,13 +9,14 @@ urlpatterns = [
     path('verify-otp/', views.verify_otp, name='verify_otp'),  # OTP verification
     path('logout/', views.logout_view, name='logout'),   # Logout
     path('dashboard/', views.dashboard, name='dashboard'),
-
+     path('my-events/', views.my_events, name='my_events'),
     # Event management URLs
     path('events/', views.event_list, name='event_list'),        # List of events
     path('events/<int:event_id>/', views.event_detail, name='event_detail'),  # Event detail
     path('events/<int:event_id>/register/', views.register_event, name='register_event'),  # Register for event
      path('register/<int:event_id>/', views.register_event, name='register_event'),
      path('events/add/', views.add_event, name='add_event'),
+     path('events/<int:event_id>/registered/', views.registration_success, name='registration_success'),
 
 
     # Password reset URLs

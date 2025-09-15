@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
+from django.utils import timezone
 
 from .models import UserProfile, Event
 from .forms import EventForm
@@ -31,34 +32,41 @@ def add_event(request):
 
 @login_required
 def dashboard(request):
-    all_events = Event.objects.order_by('event_date')
-    user_events = Event.objects.filter(user=request.user).order_by('event_date')  # or created_by=request.use
+    # Events NOT created by current user
+    outsider_events = Event.objects.exclude(user=request.user).order_by('event_date')
+
     if request.method == "POST":
         form = EventForm(request.POST)
         if form.is_valid():
             event = form.save(commit=False)
-            event.user= request.user  # Assign logged-in user as creator
+            event.user = request.user  # Assign logged-in user as creator
             event.save()
             return redirect('dashboard')
     else:
         form = EventForm()
-    return render(request, 'accounts/dashboard.html', {
-        'all_events': all_events,
-        'user_events': user_events,
+
+    context = {
+        'outsider_events': outsider_events,
         'form': form,
         'user': request.user
-    })
+    }
+    return render(request, "accounts/dashboard.html", context)
+
+
+    
 
 @login_required
 def register_event(request, event_id):
     event = get_object_or_404(Event, id=event_id)
     user = request.user
-    if user in event.registrants.all():
-        event.registrants.remove(user)  # Unregister
-    else:
-        event.registrants.add(user)     # Register
-    # Redirect to event detail or dashboard - choose one
-    return redirect('event_detail', event_id=event.id)
+    if user not in event.registrants.all():
+        event.registrants.add(user)
+    return redirect('registration_success', event_id=event.id)  # <-- changed line
+
+@login_required
+def registration_success(request, event_id):
+    event = get_object_or_404(Event, id=event_id)
+    return render(request, 'accounts/registration_success.html', {'event': event})
 
 
 def signup(request):
@@ -177,7 +185,45 @@ def event_list(request):
     events = Event.objects.order_by('event_date')
     return render(request, "accounts/event_list.html", {"events": events})
 
-
 def event_detail(request, event_id):
     event = get_object_or_404(Event, id=event_id)
     return render(request, "accounts/event_detail.html", {"event": event})
+
+@login_required
+def my_events(request):
+    user_events = Event.objects.filter(user=request.user).order_by('event_date')
+
+    if request.method == "POST":
+        form = EventForm(request.POST)
+        if form.is_valid():
+            event = form.save(commit=False)
+            event.user = request.user  # assign the current user as the creator
+            event.save()
+            return redirect('my_events')
+    else:
+        form = EventForm()
+
+    context = {
+        'user_events': user_events,
+        'form': form,
+        'user': request.user
+    }
+    return render(request, "accounts/my_events.html", context)
+def register_for_event(request, event_id):
+    event = Event.objects.get(id=event_id)
+    now = timezone.now()
+    
+    if event.registration_end_time and now > event.registration_end_time:
+        # Registration closed
+        messages.error(request, "Registration for this event is closed.")
+        return redirect('dashboard')
+    
+    if event.registration_limit is not None and event.registrants.count() >= event.registration_limit:
+        # Limit reached
+        messages.error(request, "Registration limit reached for this event.")
+        return redirect('dashboard')
+    
+    # Otherwise, proceed with registration
+    event.registrants.add(request.user)
+    messages.success(request, "You have successfully registered.")
+    return redirect('dashboard')

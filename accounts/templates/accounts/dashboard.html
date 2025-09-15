@@ -15,11 +15,14 @@
             align-items: center;
             justify-content: space-between;
         }
-        .logout-link {
+        .header-bar a {
             color: white;
+            margin-left: 15px;
             text-decoration: none;
-            font-size: 1.25rem;
-            margin-left: 10px;
+            font-weight: 500;
+        }
+        .header-bar a:hover {
+            text-decoration: underline;
         }
         .form-section, .events-section {
             max-width: 700px;
@@ -36,17 +39,70 @@
         .event-card:hover {
             box-shadow: 0 6px 24px rgba(0,0,0,0.13);
         }
+        .event-title-link {
+            color: #0d6efd;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .event-title-link:hover {
+            color: #0a58ca;
+            text-decoration: underline;
+        }
+        /* Custom alert popup styles */
+        .custom-alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }       
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Custom Alert (Hidden by default) -->
+    <div id="successAlert" class="custom-alert alert alert-success alert-dismissible" role="alert">
+        <i class="bi bi-check-circle-fill"></i>
+        <span id="alertMessage">You are registered to this event!</span>
+        <button type="button" class="btn-close" onclick="hideAlert()"></button>
+    </div>
+
     <!-- Header -->
     <div class="header-bar">
-        <span class="fs-3 fw-bold">Event Manager Dashboard</span>
-        <span>
-            {{ user.username }}
-            <a href="{% url 'logout' %}" class="logout-link" title="Logout">
-                <i class="bi bi-box-arrow-right"></i> Logout
-            </a>
+        <span class="fs-3 fw-bold">Event Manager</span>
+        <span class="d-flex align-items-center">
+            <a href="{% url 'dashboard' %}" class="me-3">Home</a>
+            <a href="{% url 'my_events' %}" class="me-3">My Events</a>
+            <!-- Profile Dropdown -->
+            <div class="dropdown">
+                <button class="btn btn-link dropdown-toggle p-0 border-0" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="color:white; font-size:1.4rem;">
+                    <i class="bi bi-person-circle"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                    <li class="dropdown-header">
+                        <i class="bi bi-person-circle me-2"></i>
+                        {{ user.username }}
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center fw-bold" href="{% url 'logout' %}" style="color: #0d6efd;">
+                            <i class="bi bi-box-arrow-right me-2"></i>
+                            Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </span>
     </div>
 
@@ -75,53 +131,41 @@
             <div class="col-12">
                 <button type="submit" class="btn btn-primary w-100">Add Event</button>
             </div>
+            <div class="col-12">
+                <button type="button" class="btn btn-secondary w-100 mt-2" id="cancelEventFormBtn">Cancel</button>
+            </div>
         </form>
     </div>
 
-    <!-- User Created Events -->
-    <div class="events-section">
-        <h4>Your Created Events</h4>
-        {% if user_events %}
-            <ul class="list-group mb-4">
-                {% for event in user_events %}
-                    <li class="list-group-item">
-                        {{ event.title }} - {{ event.event_date|date:"M d, Y H:i" }}
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>You have not added any events yet.</p>
-        {% endif %}
-    </div>
-
-    <!-- All Events Section -->
-    <div class="events-section">
-        <h4>All Events</h4>
-        <!-- Your existing all events display goes here -->
-        {% for event in all_events %}
+    <!-- Outsider Events Section (toggle with JS) -->
+    <div class="events-section" id="eventsSection">
+        <h4>Events You Can Register</h4>
+        {% for event in outsider_events %}
             <div class="event-card">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div>
-                        <h5 class="mb-1">{{ event.title }}</h5>
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1">
+                            <a href="{% url 'event_detail' event.id %}" class="event-title-link">
+                                {{ event.title }}
+                            </a>
+                        </h5>
                         <div class="text-muted">{{ event.event_date|date:"M d, Y H:i" }}</div>
                     </div>
-                    <span>
+                    <div class="ms-3">
                         {% if user in event.registrants.all %}
-                            <form method="post" action="{% url 'register_event' event.id %}">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-danger btn-sm">Unregister</button>
-                            </form>
+                            <button type="button" class="btn btn-secondary btn-sm" disabled>
+                                <i class="bi bi-check-circle"></i> Registered
+                            </button>
                         {% else %}
-                            <form method="post" action="{% url 'register_event' event.id %}">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-success btn-sm">Register</button>
-                            </form>
+                            <button type="button" 
+                                    class="btn btn-success btn-sm register-btn" 
+                                    data-event-title="{{ event.title }}"
+                                    onclick="showRegistrationAlert('{{ event.title }}')">
+                                Register
+                            </button>
                         {% endif %}
-                    </span>
+                    </div>
                 </div>
-                <p class="mb-2">{{ event.description }}</p>
-                <small class="text-secondary">Created by: {{ event.created_by.username }}</small>
-                <div><small class="text-info">Registered: {{ event.registrants.count }}</small></div>
             </div>
         {% empty %}
             <div class="alert alert-info">No events available.</div>
@@ -132,8 +176,33 @@
     <script>
         document.getElementById('showEventFormBtn').onclick = function() {
             document.getElementById('eventFormWrapper').classList.remove('d-none');
+            document.getElementById('eventsSection').classList.add('d-none');
             this.classList.add('d-none');
         };
+
+        document.getElementById('cancelEventFormBtn').onclick = function() {
+            document.getElementById('eventFormWrapper').classList.add('d-none');
+            document.getElementById('eventsSection').classList.remove('d-none');
+            document.getElementById('showEventFormBtn').classList.remove('d-none');
+        };
+
+        function showRegistrationAlert(eventTitle) {
+            const alertDiv = document.getElementById('successAlert');
+            const messageSpan = document.getElementById('alertMessage');
+            // Update message with event title
+            messageSpan.textContent = `You are registered to ${eventTitle}!`;
+            // Show alert
+            alertDiv.style.display = 'block';
+            // Auto hide after 4 seconds
+            setTimeout(function() {
+                hideAlert();
+            }, 4000);
+        }
+
+        function hideAlert() {
+            const alertDiv = document.getElementById('successAlert');
+            alertDiv.style.display = 'none';
+        }
     </script>
 </body>
 </html>

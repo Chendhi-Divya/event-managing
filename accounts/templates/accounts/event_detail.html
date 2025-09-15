@@ -1,0 +1,31 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>{{ event.title }} - Event Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body>
+<div class="container my-5" style="max-width: 700px;">
+  
+
+    <h2 class="mb-3">{{ event.title }}</h2>
+    <p>{{ event.description }}</p>
+    <p><strong>Date:</strong> {{ event.event_date|date:"M d, Y H:i" }}</p>
+
+    {% if user.is_authenticated %}
+        {% if user not in event.registrants.all %}
+            <form method="post" action="{% url 'register_event' event.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success">Register</button>
+            </form>
+        {% endif %}
+    {% else %}
+        <p><a href="{% url 'login' %}">Login</a> to register for this event.</p>
+    {% endif %}
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
