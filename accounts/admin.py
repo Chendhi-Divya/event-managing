@@ -16,8 +16,12 @@ admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
 
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('title', 'user', 'event_date', 'created_at')
-    search_fields = ('title', 'user__username')
-    list_filter = ('event_date', 'user')
+    list_display = ('title', 'get_owners', 'event_date', 'created_at')
+    search_fields = ('title', 'owners__username')
+    list_filter = ('event_date', 'owners')
+
+    def get_owners(self, obj):
+        return ", ".join([user.username for user in obj.owners.all()])
+    get_owners.short_description = 'Owners'
 
 admin.site.register(Event, EventAdmin)

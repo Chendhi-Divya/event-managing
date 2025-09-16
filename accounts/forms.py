@@ -12,6 +12,7 @@ class EventForm(forms.ModelForm):
             'start_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'end_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'registration_end_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'event_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
         }
     def clean(self):
         cleaned_data = super().clean()
