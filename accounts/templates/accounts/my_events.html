@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <title>My Events - Event Manager</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css" />
     <style>
         .header-bar {
             background: #0d6efd;
@@ -45,24 +45,27 @@
 </head>
 <body>
     <div class="header-bar">
-        <a href="{% url 'dashboard' %}" class="back-link">
-            <i class="bi bi-arrow-left" style="font-size: 1.5rem; margin-right: 8px;"></i> 
+        <a href="{% url 'dashboard' %}" class="back-link" aria-label="Go back to dashboard">
+            <i class="bi bi-arrow-left" style="font-size: 1.5rem; margin-right: 8px;"></i>
+            Dashboard
         </a>
         <span class="fs-3 fw-bold">My Events</span>
     </div>
     <div class="container mt-4">
         <h4>Your Organized Events</h4>
-        {% for event in user_events %}
-            <div class="card mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">{{ event.title }}</h5>
-                    <h6 class="card-subtitle mb-2 text-muted">{{ event.event_date|date:"M d, Y H:i" }}</h6>
-                    <p class="card-text">{{ event.description }}</p>
+        {% if my_events %}
+            {% for event in my_events %}
+                <div class="card mb-3" aria-label="Event titled {{ event.title }}">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ event.title }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">{{ event.event_date|date:"M d, Y H:i" }}</h6>
+                        <p class="card-text">{{ event.description }}</p>
+                    </div>
                 </div>
-            </div>
-        {% empty %}
+            {% endfor %}
+        {% else %}
             <div class="alert alert-info">You have not organized any events yet.</div>
-        {% endfor %}
+        {% endif %}
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

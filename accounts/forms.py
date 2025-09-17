@@ -1,6 +1,7 @@
 from django import forms
 from .models import Event
 
+
 class EventForm(forms.ModelForm):
     class Meta:
         model = Event
@@ -14,15 +15,16 @@ class EventForm(forms.ModelForm):
             'registration_end_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'event_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
         }
+
     def clean(self):
         cleaned_data = super().clean()
-        
+
         start = cleaned_data.get('start_time')
         end = cleaned_data.get('end_time')
         reg_end = cleaned_data.get('registration_end_time')
         limit = cleaned_data.get('registration_limit')
 
-        # Validate that start_time is before end_time
+        # Validate start_time is before end_time
         if start and end and start >= end:
             self.add_error('end_time', 'End time must be after start time.')
 

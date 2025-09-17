@@ -57,7 +57,7 @@
             min-width: 300px;
             display: none;
             animation: slideIn 0.3s ease-out;
-        }       
+        }
         @keyframes slideIn {
             from {
                 transform: translateX(100%);
@@ -71,7 +71,7 @@
     </style>
 </head>
 <body>
-    <!-- Custom Alert (Hidden by default) -->
+    <!-- Custom Alert (hidden by default) -->
     <div id="successAlert" class="custom-alert alert alert-success alert-dismissible" role="alert">
         <i class="bi bi-check-circle-fill"></i>
         <span id="alertMessage">You are registered to this event!</span>
@@ -84,7 +84,6 @@
         <span class="d-flex align-items-center">
             <a href="{% url 'dashboard' %}" class="me-3">Home</a>
             <a href="{% url 'my_events' %}" class="me-3">My Events</a>
-            <!-- Profile Dropdown -->
             <div class="dropdown">
                 <button class="btn btn-link dropdown-toggle p-0 border-0" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="color:white; font-size:1.4rem;">
                     <i class="bi bi-person-circle"></i>
@@ -111,10 +110,22 @@
         <button id="showEventFormBtn" class="btn btn-primary mb-4">Add Event</button>
     </div>
 
-    <!-- Hidden Add New Event Form -->
+    <!-- Event Form (hidden initially) -->
     <div id="eventFormWrapper" class="form-section bg-light rounded shadow p-4 mb-4 d-none">
         <h4>Add New Event</h4>
-        <form method="post" class="row g-3" action="{% url 'add_event' %}">
+        {% if form.errors %}
+            <div class="alert alert-danger">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <strong>{{ field.label }}:</strong> {{ error }}<br>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    {{ error }}<br>
+                {% endfor %}
+            </div>
+        {% endif %}
+        <form method="post" action="{% url 'dashboard' %}" class="row g-3">
             {% csrf_token %}
             <div class="col-md-6">
                 <label class="form-label" for="{{ form.title.id_for_label }}">Title</label>
@@ -137,7 +148,7 @@
         </form>
     </div>
 
-    <!-- Outsider Events Section -->
+    <!-- Outsider Events -->
     <div class="events-section" id="eventsSection">
         <h4>Events You Can Register</h4>
         {% if outsider_events %}
