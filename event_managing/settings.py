@@ -88,12 +88,11 @@ REST_FRAMEWORK = {
 }
 
 # Email backend for development
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'  # example for Gmail
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'chendhidivya@gmail.com'
-EMAIL_HOST_PASSWORD = 'kjbb uhhl imqa kith'
+EMAIL_HOST_PASSWORD = 'lmxykuftqjaljymb'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

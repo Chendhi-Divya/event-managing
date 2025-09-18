@@ -1,19 +1,19 @@
 from django import forms
 from .models import Event
 
-
 class EventForm(forms.ModelForm):
     class Meta:
         model = Event
-        fields = [
-            'title', 'meeting_link', 'start_time', 'end_time',
-            'registration_limit', 'registration_end_time', 'event_date', 'description'
-        ]
+        fields = ['title', 'description', 'event_date', 'meeting_link', 'start_time', 'end_time', 'registration_limit', 'registration_end_time']
         widgets = {
-            'start_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'end_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'registration_end_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'event_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control'}),
+            'event_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'meeting_link': forms.URLInput(attrs={'class': 'form-control'}),
+            'start_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'end_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'registration_limit': forms.NumberInput(attrs={'class': 'form-control'}),
+            'registration_end_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
         }
 
     def clean(self):
