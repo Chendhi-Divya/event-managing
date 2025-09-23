@@ -10,6 +10,8 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),   # Logout
     path('dashboard/', views.dashboard, name='dashboard'),
      path('my-events/', views.my_events, name='my_events'),
+     path('add-event/', views.add_event, name='add_event'),
+    
     # Event management URLs
     path('events/', views.event_list, name='event_list'),        # List of events
     path('events/<int:event_id>/', views.event_detail, name='event_detail'),  # Event detail

@@ -12,7 +12,14 @@
 
     <h2 class="mb-3">{{ event.title }}</h2>
     <p>{{ event.description }}</p>
-    <p><strong>Date:</strong> {{ event.event_date|date:"M d, Y H:i" }}</p>
+    <p><strong>Event Date:</strong> {{ event.event_date|date:"M d, Y H:i" }}</p>
+    <p><strong>Start Date:</strong> {{ event.start_time|date:"M d, Y H:i" }}</p>
+    <p><strong>End Date:</strong> {{ event.end_time|date:"M d, Y H:i" }}</p>
+    <p><strong>Meeting Link:</strong> {{ event.meeting_link}}</p>
+    <p><strong>Maximum Participants:</strong> {{event.max_participants}}</p>
+    <p><strong>Registration Deadline</strong> {{ event.registration_deadline}}</p>
+
+
 
     {% if user.is_authenticated %}
         {% if user not in event.registrants.all %}

@@ -83,7 +83,7 @@
         <span class="fs-3 fw-bold">Event Manager</span>
         <span class="d-flex align-items-center">
             <a href="{% url 'dashboard' %}" class="me-3">Home</a>
-            <a href="{% url 'my_events' %}" class="me-3">My Events1</a>
+            <a href="{% url 'my_events' %}" class="me-3">My Events</a>
             <div class="dropdown">
                 <button class="btn btn-link dropdown-toggle p-0 border-0" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="color:white; font-size:1.4rem;">
                     <i class="bi bi-person-circle"></i>
@@ -107,7 +107,7 @@
 
     <!-- Add Event Button -->
     <div class="form-section text-center">
-        <button id="showEventFormBtn" class="btn btn-primary mb-4">Add Event1</button>
+        <button id="showEventFormBtn" class="btn btn-primary mb-4">Add Event</button>
     </div>
 
     <!-- Event Form (hidden initially) -->
@@ -125,79 +125,74 @@
                 {% endfor %}
             </div>
         {% endif %}
-        <form method="post" action="{% url 'add_event' %}" class="row g-3">
+        <form method="post" novalidate>
             {% csrf_token %}
-            <div class="col-md-6">
-                <label class="form-label" for="{{ form.title.id_for_label }}">Title</label>
-                {{ form.title|add_class:"form-control" }}
-            </div>
-            <div class="col-md-6">
-                <label class="form-label" for="{{ form.event_date.id_for_label }}">Date & Time</label>
-                {{ form.event_date|add_class:"form-control" }}
-            </div>
-            <div class="col-12">
-                <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
-                {{ form.description|add_class:"form-control" }}
-            </div>
-            <div class="col-12">
-                <button type="submit" class="btn btn-primary w-100">Add Event</button>
-            </div>
-            <div class="col-12">
-                <button type="button" class="btn btn-secondary w-100 mt-2" id="cancelEventFormBtn">Cancel</button>
-            </div>
+            {% for field in form %}
+                <div class="mb-3">
+                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field|add_class:"form-control" }}
+                    {% if field.help_text %}
+                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary w-100">Add Event</button>
+            <button type="button" class="btn btn-secondary w-100 mt-2" id="cancelEventFormBtn">Cancel</button>
         </form>
     </div>
 
-  <div class="events-section" id="eventsSection">
-    <h4>All Events</h4>
-    {% if all_events %}
-        {% for event in all_events %}
-            <div class="event-card">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <h5 class="mb-1">
-                            <a href="{% url 'event_detail' event.id %}" class="event-title-link">
-                                {{ event.title }}
-                            </a>
-                        </h5>
-                        <div class="text-muted">{{ event.event_date|date:"M d, Y H:i" }}</div>
-                    </div>
-                    <div class="ms-3">
-                        {% if user in event.registrants.all %}
-                            <button type="button" class="btn btn-secondary btn-sm" disabled>
-                                <i class="bi bi-check-circle"></i> Registered
-                            </button>
-                        {% else %}
-                            <form method="post" action="{% url 'register_event' event.id %}">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-success btn-sm">
-                                    Register
+    <!-- Events Section -->
+    <div class="events-section" id="eventsSection">
+        <h4>All Events</h4>
+        {% if all_events %}
+            {% for event in all_events %}
+                <div class="event-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1">
+                                <a href="{% url 'event_detail' event.id %}" class="event-title-link">
+                                    {{ event.title }}
+                                </a>
+                            </h5>
+                            <div class="text-muted">{{ event.event_date|date:"M d, Y H:i" }}</div>
+                        </div>
+                        <div class="ms-3">
+                            {% if user in event.registrants.all %}
+                                <button type="button" class="btn btn-secondary btn-sm" disabled>
+                                    <i class="bi bi-check-circle"></i> Registered
                                 </button>
-                            </form>
-                        {% endif %}
+                            {% else %}
+                                <form method="post" action="{% url 'register_event' event.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        Register
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-            </div>
-        {% endfor %}
-    {% else %}
-        <div class="alert alert-info">No events available.</div>
-    {% endif %}
-</div>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info">No events available.</div>
+        {% endif %}
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Show Add Event Form
         document.getElementById('showEventFormBtn').onclick = function() {
             document.getElementById('eventFormWrapper').classList.remove('d-none');
             document.getElementById('eventsSection').classList.add('d-none');
             this.classList.add('d-none');
         };
 
+        // Cancel button redirects back to dashboard
         document.getElementById('cancelEventFormBtn').onclick = function() {
-            document.getElementById('eventFormWrapper').classList.add('d-none');
-            document.getElementById('eventsSection').classList.remove('d-none');
-            document.getElementById('showEventFormBtn').classList.remove('d-none');
+            window.location.href = "{% url 'dashboard' %}";
         };
 
+        // Registration alert popup
         function showRegistrationAlert(eventTitle) {
             const alertDiv = document.getElementById('successAlert');
             const messageSpan = document.getElementById('alertMessage');

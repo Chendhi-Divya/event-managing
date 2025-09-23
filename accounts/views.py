@@ -16,53 +16,50 @@ import random
 def home(request):
     return render(request, "home.html")
 
-
 @login_required
 def add_event(request):
+    if request.method == 'POST':
+        form = EventForm(request.POST)
+        if form.is_valid():
+            event = form.save(commit=False)
+            event.created_by = request.user  # assign current user
+            event.save()
+            return redirect('my_events')  # redirect to my_events
+    else:
+        form = EventForm()
+    return render(request, 'dashboard.html', {'form': form})
+
+@login_required
+def dashboard(request):
     if request.method == "POST":
         form = EventForm(request.POST)
         if form.is_valid():
             event = form.save(commit=False)
-            event.is_admin_event = False
             event.save()
-            event.owners.add(request.user)
-            messages.success(request, "Event added successfully.")
-        else:
-            # show errors
-            messages.error(request, f"Event not added. Errors: {form.errors}")
-        return redirect('dashboard')
-    return redirect('dashboard')
+            event.owners.add(request.user)  # assign logged-in user as owner
+            messages.success(request, "Event created successfully.")
+            return redirect('my_events')
+    else:
+        form = EventForm()
 
-
-
-@login_required
-def dashboard(request):
-    form = EventForm()
-
-    # Events created by the current user (go to My Events page)
-    my_events = Event.objects.filter(owners=request.user).order_by('event_date')
-
-    # Events created by others (registerable events)
-    outsider_events = Event.objects.exclude(owners=request.user).order_by('event_date')
+    # Show all events
+    all_events = Event.objects.all().order_by('event_date')
 
     context = {
-        'form': form,
-        'outsider_events': outsider_events,  # only others' events
-        'my_events': my_events,  # only my events
-        'user': request.user,
+        "form": form,
+        "all_events": all_events,
     }
-    return render(request, 'accounts/dashboard.html', context)
-
+    return render(request, "accounts/dashboard.html", context)
 
 
 @login_required
 def register_event(request, event_id):
     event = get_object_or_404(Event, id=event_id)
     now = timezone.now()
-    if event.registration_end_time and now > event.registration_end_time:
+    if event.registration_deadline and now > event.registration_deadline:
         messages.error(request, "Registration for this event is closed.")
         return redirect('dashboard')
-    if event.registration_limit is not None and event.registrants.count() >= event.registration_limit:
+    if event.max_participants is not None and event.registrants.count() >= event.max_participants:
         messages.error(request, "Registration limit reached for this event.")
         return redirect('dashboard')
     event.registrants.add(request.user)
@@ -74,7 +71,6 @@ def register_event(request, event_id):
 def registration_success(request, event_id):
     event = get_object_or_404(Event, id=event_id)
     return render(request, 'accounts/registration_success.html', {'event': event})
-
 
 @login_required
 def my_events(request):
@@ -89,19 +85,14 @@ def my_events(request):
             event.owners.add(request.user)
             messages.success(request, "Event added successfully.")
             return redirect('my_events')
-        else:
-            messages.error(request, "Please correct the errors in the form.")
     else:
         form = EventForm()
 
     context = {
-        'my_events': my_events,  # ✅ match template
+        'my_events': my_events,
         'form': form,
-        'user': request.user,
     }
     return render(request, 'accounts/my_events.html', context)
-
-
 
 def signup(request):
     if request.method == "POST":
@@ -212,3 +203,4 @@ def event_list(request):
 def event_detail(request, event_id):
     event = get_object_or_404(Event, id=event_id)
     return render(request, 'accounts/event_detail.html', {'event': event})
+
