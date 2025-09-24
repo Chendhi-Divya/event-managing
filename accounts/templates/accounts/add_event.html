@@ -11,18 +11,47 @@
     <h2 class="mb-4">Add New Event</h2>
     <form method="post" novalidate>
         {% csrf_token %}
+        
         <div class="mb-3">
             <label class="form-label" for="{{ form.title.id_for_label }}">Title</label>
             {{ form.title|add_class:"form-control" }}
         </div>
+        
         <div class="mb-3">
-            <label class="form-label" for="{{ form.event_date.id_for_label }}">Date & Time</label>
+            <label class="form-label" for="{{ form.event_date.id_for_label }}">Event Date</label>
             {{ form.event_date|add_class:"form-control" }}
         </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="{{ form.start_time.id_for_label }}">Start Time</label>
+            {{ form.start_time|add_class:"form-control" }}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="{{ form.end_time.id_for_label }}">End Time</label>
+            {{ form.end_time|add_class:"form-control" }}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="{{ form.meeting_link.id_for_label }}">Meeting Link</label>
+            {{ form.meeting_link|add_class:"form-control" }}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="{{ form.max_participants.id_for_label }}">Maximum Participants</label>
+            {{ form.max_participants|add_class:"form-control" }}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="{{ form.registration_deadline.id_for_label }}">Registration Deadline</label>
+            {{ form.registration_deadline|add_class:"form-control" }}
+        </div>
+
         <div class="mb-3">
             <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
             {{ form.description|add_class:"form-control" }}
         </div>
+        
         <button type="submit" class="btn btn-primary w-100">Add Event</button>
     </form>
 </div>

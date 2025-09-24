@@ -6,15 +6,49 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
 from django.utils import timezone
-
 from .models import UserProfile, Event
 from .forms import EventForm
-
 import random
 
 
 def home(request):
     return render(request, "home.html")
+
+
+@login_required
+def dashboard(request):
+    form = EventForm(request.POST or None)
+
+    if request.method == "POST":
+        if form.is_valid():
+            event = form.save(commit=False)
+            event.save()
+            event.owners.add(request.user)
+            messages.success(request, "Event created successfully.")
+            return redirect('dashboard')
+        else:
+            print("Form errors:", form.errors)
+
+    all_events = Event.objects.exclude(owners=request.user).order_by('event_date')
+
+
+    # Ensure times are strings for display to avoid parse_time error
+    for event in all_events:
+        if event.start_time:
+            event.start_time_str = event.start_time.strftime("%H:%M")  # Convert to string
+        else:
+            event.start_time_str = None
+
+        if event.end_time:
+            event.end_time_str = event.end_time.strftime("%H:%M")
+        else:
+            event.end_time_str = None
+
+    return render(request, "accounts/dashboard.html", {
+        "form": form,
+        "all_events": all_events
+    })
+
 
 @login_required
 def add_event(request):
@@ -22,46 +56,32 @@ def add_event(request):
         form = EventForm(request.POST)
         if form.is_valid():
             event = form.save(commit=False)
-            event.created_by = request.user  # assign current user
+            event.created_by = request.user
             event.save()
-            return redirect('my_events')  # redirect to my_events
-    else:
-        form = EventForm()
-    return render(request, 'dashboard.html', {'form': form})
-
-@login_required
-def dashboard(request):
-    if request.method == "POST":
-        form = EventForm(request.POST)
-        if form.is_valid():
-            event = form.save(commit=False)
-            event.save()
-            event.owners.add(request.user)  # assign logged-in user as owner
-            messages.success(request, "Event created successfully.")
+            event.owners.add(request.user)
+            messages.success(request, "Event added successfully.")
             return redirect('my_events')
+        else:
+            print(form.errors)
     else:
         form = EventForm()
 
-    # Show all events
-    all_events = Event.objects.all().order_by('event_date')
-
-    context = {
-        "form": form,
-        "all_events": all_events,
-    }
-    return render(request, "accounts/dashboard.html", context)
+    return render(request, 'add_event.html', {'form': form})
 
 
 @login_required
 def register_event(request, event_id):
     event = get_object_or_404(Event, id=event_id)
     now = timezone.now()
+
     if event.registration_deadline and now > event.registration_deadline:
         messages.error(request, "Registration for this event is closed.")
         return redirect('dashboard')
+
     if event.max_participants is not None and event.registrants.count() >= event.max_participants:
         messages.error(request, "Registration limit reached for this event.")
         return redirect('dashboard')
+
     event.registrants.add(request.user)
     messages.success(request, "Registered for event successfully.")
     return redirect('registration_success', event_id=event.id)
@@ -71,6 +91,7 @@ def register_event(request, event_id):
 def registration_success(request, event_id):
     event = get_object_or_404(Event, id=event_id)
     return render(request, 'accounts/registration_success.html', {'event': event})
+
 
 @login_required
 def my_events(request):
@@ -88,11 +109,11 @@ def my_events(request):
     else:
         form = EventForm()
 
-    context = {
+    return render(request, 'accounts/my_events.html', {
         'my_events': my_events,
         'form': form,
-    }
-    return render(request, 'accounts/my_events.html', context)
+    })
+
 
 def signup(request):
     if request.method == "POST":
@@ -108,6 +129,7 @@ def signup(request):
         if User.objects.filter(username=username).exists():
             messages.error(request, "Username already taken.")
             return render(request, "accounts/signup.html")
+
         if User.objects.filter(email=email).exists():
             messages.error(request, "Email already registered.")
             return render(request, "accounts/signup.html")
@@ -204,3 +226,15 @@ def event_detail(request, event_id):
     event = get_object_or_404(Event, id=event_id)
     return render(request, 'accounts/event_detail.html', {'event': event})
 
+
+
+@login_required
+def registered_events(request):
+    events = Event.objects.filter(registrants=request.user)
+    return render(request, 'accounts/registered_events.html', {'events': events})
+
+@login_required
+def unregister_event(request, event_id):
+    event = get_object_or_404(Event, id=event_id)
+    event.registrants.remove(request.user)
+    return redirect('registered_events')

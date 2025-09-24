@@ -11,7 +11,12 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
      path('my-events/', views.my_events, name='my_events'),
      path('add-event/', views.add_event, name='add_event'),
-    
+     path('registered-events/', views.registered_events, name='registered_events'),
+     path('unregister-event/<int:event_id>/', views.unregister_event, name='unregister_event'),
+
+
+
+
     # Event management URLs
     path('events/', views.event_list, name='event_list'),        # List of events
     path('events/<int:event_id>/', views.event_detail, name='event_detail'),  # Event detail
@@ -20,7 +25,7 @@ urlpatterns = [
      path('events/add/', views.add_event, name='add_event'),
      path('events/<int:event_id>/registered/', views.registration_success, name='registration_success'),
      path('events/<int:event_id>/', views.event_detail, name='event_detail'),
-
+     
 
     # Password reset URLs
     path("password-reset/",

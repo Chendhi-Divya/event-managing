@@ -71,39 +71,101 @@
     </style>
 </head>
 <body>
+     <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1060;">
+    <div id="registerToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" id="registerToastText">
+          Successfully registered!
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+  </div>
+
+
+
     <!-- Custom Alert (hidden by default) -->
     <div id="successAlert" class="custom-alert alert alert-success alert-dismissible" role="alert">
         <i class="bi bi-check-circle-fill"></i>
         <span id="alertMessage">You are registered to this event!</span>
         <button type="button" class="btn-close" onclick="hideAlert()"></button>
     </div>
+    
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: #0d6efd;">
+  <div class="container-fluid">
+    <a class="navbar-brand fs-3 fw-bold" href="{% url 'dashboard' %}">Event Manager</a>
 
-    <!-- Header -->
-    <div class="header-bar">
-        <span class="fs-3 fw-bold">Event Manager</span>
-        <span class="d-flex align-items-center">
-            <a href="{% url 'dashboard' %}" class="me-3">Home</a>
-            <a href="{% url 'my_events' %}" class="me-3">My Events</a>
-            <div class="dropdown">
-                <button class="btn btn-link dropdown-toggle p-0 border-0" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="color:white; font-size:1.4rem;">
-                    <i class="bi bi-person-circle"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-                    <li class="dropdown-header">
-                        <i class="bi bi-person-circle me-2"></i>
-                        {{ user.username }}
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        <a class="dropdown-item d-flex align-items-center fw-bold" href="{% url 'logout' %}" style="color: #0d6efd;">
-                            <i class="bi bi-box-arrow-right me-2"></i>
-                            Logout
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </span>
+    <div class="d-flex align-items-center ms-auto">
+      <a href="{% url 'dashboard' %}" class="nav-link text-white me-3">Home</a>
+      <a href="{% url 'my_events' %}" class="nav-link text-white me-3">My Events</a>
+      <a href="{% url 'registered_events' %}" class="nav-link text-white me-3"> Registered Events</a>
+
+      <!-- Add this CSS in your <head> or stylesheet -->
+<style>
+  /* Hide Bootstrap default dropdown caret after the button */
+  #profileDropdown::after {
+      display: none;
+  }
+</style>
+<script>
+document.querySelectorAll('.register-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    const eventId = btn.getAttribute('data-event-id');
+    const button = btn;
+
+    fetch("{% url 'register_event' 0 %}".replace('0', eventId), {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Accept': 'application/json'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('registerToastText').textContent = "Successfully registered!";
+        const toastEl = document.getElementById('registerToast');
+        const toast = new bootstrap.Toast(toastEl);
+        toast.show();
+
+        // Update the button
+        button.textContent = 'Registered';
+        button.disabled = true;
+        button.classList.remove('btn-primary');
+        button.classList.add('btn-secondary');
+      } else {
+        alert(data.error || 'Registration failed.');
+      }
+    });
+  });
+});
+</script>
+
+
+<!-- Profile dropdown HTML -->
+<div class="dropdown">
+  <button class="btn btn-link dropdown-toggle p-0 border-0 text-white fs-4" 
+          type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+    <i class="bi bi-person-circle"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+    <li class="dropdown-header d-flex align-items-center">
+      <i class="bi bi-person-circle me-2"></i>
+      {{ user.username }}
+    </li>
+    <li><hr class="dropdown-divider"></li>
+    <li>
+      <a class="dropdown-item d-flex align-items-center fw-bold" href="{% url 'logout' %}" style="color: #0d6efd;">
+        <i class="bi bi-box-arrow-right me-2"></i>
+        Logout
+      </a>
+    </li>
+  </ul>
+</div>
+
     </div>
+  </div>
+</nav>
 
     <!-- Add Event Button -->
     <div class="form-section text-center">
@@ -125,7 +187,7 @@
                 {% endfor %}
             </div>
         {% endif %}
-        <form method="post" novalidate>
+        <form method="POST">
             {% csrf_token %}
             {% for field in form %}
                 <div class="mb-3">
@@ -154,7 +216,7 @@
                                     {{ event.title }}
                                 </a>
                             </h5>
-                            <div class="text-muted">{{ event.event_date|date:"M d, Y H:i" }}</div>
+                            <div class="text-muted">{{ event.event_date|date:"M d, Y" }}</div>
                         </div>
                         <div class="ms-3">
                             {% if user in event.registrants.all %}
@@ -164,9 +226,11 @@
                             {% else %}
                                 <form method="post" action="{% url 'register_event' event.id %}">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn btn-success btn-sm">
-                                        Register
-                                    </button>
+                                    <a href="{% url 'event_detail' event.id %}" class="btn btn-primary btn-sm">
+                                    View Event Details
+                                    </a>
+
+
                                 </form>
                             {% endif %}
                         </div>
