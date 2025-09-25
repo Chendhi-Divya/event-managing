@@ -19,6 +19,7 @@ class UserProfile(models.Model):
 
 
 class Event(models.Model):
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)  
     owners = models.ManyToManyField(User, related_name='my_events', blank=True)  # Event owners
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -31,7 +32,7 @@ class Event(models.Model):
     registration_deadline = models.DateTimeField(null=True, blank=True)
     registrants = models.ManyToManyField(User, related_name='registered_events', blank=True)
     is_admin_event = models.BooleanField(default=False)
-
+   
     def __str__(self):
         return self.title
 

@@ -13,8 +13,7 @@ urlpatterns = [
      path('add-event/', views.add_event, name='add_event'),
      path('registered-events/', views.registered_events, name='registered_events'),
      path('unregister-event/<int:event_id>/', views.unregister_event, name='unregister_event'),
-
-
+    
 
 
     # Event management URLs
@@ -25,8 +24,8 @@ urlpatterns = [
      path('events/add/', views.add_event, name='add_event'),
      path('events/<int:event_id>/registered/', views.registration_success, name='registration_success'),
      path('events/<int:event_id>/', views.event_detail, name='event_detail'),
-     
-
+      path('edit-event/<int:event_id>/', views.edit_event, name='edit_event'),
+    path('delete-event/<int:event_id>/', views.delete_event, name='delete_event'),
     # Password reset URLs
     path("password-reset/",
          auth_views.PasswordResetView.as_view(template_name="accounts/password_reset.html"),

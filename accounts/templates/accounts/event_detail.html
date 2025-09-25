@@ -2,47 +2,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>{{ event.title }} - Event Details</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+ <meta charset="UTF-8" />
+ <title>{{ event.title }} - Event Details</title>
+ <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 </head>
 <body>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-
 <div class="container vh-100 d-flex justify-content-center align-items-center">
-  <div class="card shadow-sm" style="min-width: 350px; max-width: 500px; width: 100%;">
-    <div class="card-body">
-      <h3 class="card-title">{{ event.title }}</h3>
-      <p class="card-text text-muted">{{ event.description }}</p>
-      <ul class="list-group list-group-flush mb-3">
-        <li class="list-group-item"><strong>Event Date:</strong> {{ event.event_date|date:"M d, Y" }}</li>
-        <li class="list-group-item"><strong>Start Time:</strong> {{ event.start_time|time:"H:i" }}</li>
-        <li class="list-group-item"><strong>End Time:</strong> {{ event.end_time|time:"H:i" }}</li>
-        <li class="list-group-item"><strong>Meeting Link:</strong>
-          <a href="{{ event.meeting_link }}">Join Here</a>
-        </li>
-        <li class="list-group-item"><strong>Maximum Participants:</strong> {{ event.max_participants }}</li>
-        <li class="list-group-item"><strong>Registration Deadline:</strong> {{ event.registration_deadline|date:"M d, Y" }}</li>
-      </ul>
-      <div class="text-center">
-        <a href="{% url 'register_event' event.id %}" class="btn btn-success">Register</a>
-      </div>
-    </div>
-  </div>
-</div>
+ <div class="card shadow-sm" style="min-width: 350px; max-width: 500px; width: 100%;">
+ <div class="card-body">
+ <h3 class="card-title">{{ event.title }}</h3>
+ <p class="card-text text-muted">{{ event.description }}</p>
+ <ul class="list-group list-group-flush mb-3">
+ <li class="list-group-item"><strong>Event Date:</strong> {{ event.event_date|date:"M d, Y" }}</li>
+ <li class="list-group-item"><strong>Start Time:</strong> {{ event.start_time|time:"H:i" }}</li>
+ <li class="list-group-item"><strong>End Time:</strong> {{ event.end_time|time:"H:i" }}</li>
+   <li class="list-group-item"><strong>Meeting Link:</strong>
+          <a href="{{ event.meeting_link }}" target="_blank">Join Here</a>
+    </li>
+    <li class="list-group-item"><strong>Maximum Participants:</strong> {{ event.max_participants }}</li>
+    <li class="list-group-item"><strong>Registration Deadline:</strong> {{ event.registration_deadline|date:"M d, Y" }}</li>
+   </ul>
 
-
-
+   <div class="text-center">
     {% if user.is_authenticated %}
-        {% if user not in event.registrants.all %}
-            
-        {% endif %}
+      {% if user in event.registrants.all %}
+        <button class="btn btn-secondary" disabled>Registered</button>
+      {% else %}
+        <button id="registerBtn" class="btn btn-success" data-event-id="{{ event.id }}">Register</button>
+      {% endif %}
     {% else %}
-        <p><a href="{% url 'login' %}">Login</a> to register for this event.</p>
-    {% endif %}
+      <p><a href="{% url 'login' %}" class="btn btn-primary">Login</a> to register for this event.</p>
+       {% endif %}
+   </div>
 
+      <div id="successAlert" class="alert alert-success mt-3" style="display:none;">
+        <span id="alertMessage"></span>
+      </div>
+  </div>
+ </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const registerBtn = document.getElementById('registerBtn');
+  if (registerBtn) {
+    registerBtn.addEventListener('click', function() {
+      const eventId = registerBtn.getAttribute('data-event-id');
+      fetch("{% url 'register_event' 0 %}".replace('0', eventId), {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Accept': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          registerBtn.disabled = true;
+          registerBtn.textContent = "Registered";
+          showRegistrationAlert("{{ event.title }}");
+        } else {
+          alert(data.error || 'Registration failed.');
+        }
+      })
+      .catch(() => alert('Registration failed due to network error.'));
+    });
+  }
+});
+
+function showRegistrationAlert(eventTitle) {
+  const alertDiv = document.getElementById('successAlert');
+  const messageSpan = document.getElementById('alertMessage');
+  messageSpan.textContent = `You have successfully registered for ${eventTitle}!`;
+  alertDiv.style.display = 'block';
+  setTimeout(() => {
+    alertDiv.style.display = 'none';
+  }, 4000);
+}
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const registerBtn = document.getElementById('registerBtn');
+    if (registerBtn) {
+        registerBtn.addEventListener('click', function() {
+            const eventId = registerBtn.getAttribute('data-event-id');
+            fetch("{% url 'register_event' 0 %}".replace('0', eventId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+
+                    // Wait 3 seconds before redirecting
+                    setTimeout(() => {
+                        window.location.href = "{% url 'dashboard' %}";
+                    }, 1000);
+                } else {
+                    alert(data.error || 'Registration failed.');
+                }
+            })
+            .catch(() => alert('Registration failed due to network error.'));
+        });
+    }
+});
+</script>
+
+
 </body>
 </html>

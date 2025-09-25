@@ -9,21 +9,24 @@ from django.utils import timezone
 from .models import UserProfile, Event
 from .forms import EventForm
 import random
+from django.http import JsonResponse
+from django.http import HttpResponseForbidden
 
 
 def home(request):
     return render(request, "home.html")
 
 
-@login_required
+@login_required(login_url='/login/')
 def dashboard(request):
     form = EventForm(request.POST or None)
 
     if request.method == "POST":
         if form.is_valid():
-            event = form.save(commit=False)
-            event.save()
-            event.owners.add(request.user)
+            event = form.save(commit=False)  # Don't save yet
+            event.owner = request.user       # Set owner before saving
+            event.save()                     # Now save
+            event.owners.add(request.user)   # Add to owners list
             messages.success(request, "Event created successfully.")
             return redirect('dashboard')
         else:
@@ -31,26 +34,16 @@ def dashboard(request):
 
     all_events = Event.objects.exclude(owners=request.user).order_by('event_date')
 
-
-    # Ensure times are strings for display to avoid parse_time error
+    # Ensure times are strings for display
     for event in all_events:
-        if event.start_time:
-            event.start_time_str = event.start_time.strftime("%H:%M")  # Convert to string
-        else:
-            event.start_time_str = None
-
-        if event.end_time:
-            event.end_time_str = event.end_time.strftime("%H:%M")
-        else:
-            event.end_time_str = None
+        event.start_time_str = event.start_time.strftime("%H:%M") if event.start_time else None
+        event.end_time_str = event.end_time.strftime("%H:%M") if event.end_time else None
 
     return render(request, "accounts/dashboard.html", {
         "form": form,
         "all_events": all_events
     })
 
-
-@login_required
 def add_event(request):
     if request.method == 'POST':
         form = EventForm(request.POST)
@@ -74,17 +67,31 @@ def register_event(request, event_id):
     event = get_object_or_404(Event, id=event_id)
     now = timezone.now()
 
-    if event.registration_deadline and now > event.registration_deadline:
-        messages.error(request, "Registration for this event is closed.")
-        return redirect('dashboard')
+    if request.method == "POST":
+        if event.registration_deadline and now > event.registration_deadline:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.accepts('application/json'):
+                return JsonResponse({'success': False, 'error': "Registration for this event is closed."})
+            messages.error(request, "Registration for this event is closed.")
+            return redirect('dashboard')
 
-    if event.max_participants is not None and event.registrants.count() >= event.max_participants:
-        messages.error(request, "Registration limit reached for this event.")
-        return redirect('dashboard')
+        if event.max_participants is not None and event.registrants.count() >= event.max_participants:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.accepts('application/json'):
+                return JsonResponse({'success': False, 'error': "Registration limit reached for this event."})
+            messages.error(request, "Registration limit reached for this event.")
+            return redirect('dashboard')
 
-    event.registrants.add(request.user)
-    messages.success(request, "Registered for event successfully.")
-    return redirect('registration_success', event_id=event.id)
+        # Add user to registrants only if not already registered
+        if request.user not in event.registrants.all():
+            event.registrants.add(request.user)
+
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.accepts('application/json'):
+            return JsonResponse({'success': True})
+
+        messages.success(request, "Registered for event successfully.")
+        return redirect('registration_success', event_id=event.id)
+
+    # For non-POST requests, redirect to event details
+    return redirect('event_detail', event_id=event.id)
 
 
 @login_required
@@ -209,7 +216,7 @@ def generate_otp():
 
 def send_otp_email(email, otp):
     subject = "Your OTP for Event Manager"
-    message = f"Your OTP is: {otp}. It is valid for 10 minutes."
+    message = f"Your OTP is: {otp}. It is valid for 5 minutes."
     from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@example.com")
     recipient_list = [email]
     send_mail(subject, message, from_email, recipient_list, fail_silently=False)
@@ -238,3 +245,22 @@ def unregister_event(request, event_id):
     event = get_object_or_404(Event, id=event_id)
     event.registrants.remove(request.user)
     return redirect('registered_events')
+
+def edit_event(request, event_id):
+    event = get_object_or_404(Event, id=event_id)
+    if request.method == "POST":
+        form = EventForm(request.POST, instance=event)
+        if form.is_valid():
+            form.save()
+            return redirect('my_events')
+    else:
+        form = EventForm(instance=event)
+
+    return render(request, 'accounts/edit_event.html', {'form': form, 'event': event})
+
+def delete_event(request, event_id):
+    event = get_object_or_404(Event, id=event_id)
+    if request.method == "POST":
+        event.delete()
+        return redirect('my_events')
+    return render(request, 'confirm_delete.html', {'event': event})
