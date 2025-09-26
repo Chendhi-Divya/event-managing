@@ -112,46 +112,57 @@
                         {% endif %}
                     </div>
                 {% endfor %}
+
+                <!-- Invitation Emails -->
+                <div class="mb-3">
+                    <label class="form-label" for="id_invitation_emails">Invitation Emails </label>
+                    <input type="text" name="invitation_emails" id="id_invitation_emails" class="form-control"
+                           placeholder="e.g: abc@gmail.com, xyz@gmail.com">
+                    <small class="form-text text-muted">Enter one or more email addresses separated by commas.</small>
+                </div>
+
                 <button type="submit" class="btn btn-primary w-100">Add Event</button>
                 <button type="button" class="btn btn-secondary w-100 mt-2" id="cancelEventFormBtn">Cancel</button>
             </form>
         </div>
 
         <!-- Events Section -->
-        <div class="events-section" id="eventsSection">
-            <h4>All Events</h4>
-            {% if all_events %}
-                {% for event in all_events %}
-                    <div class="event-card">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1">
-                                <h5 class="mb-1">
-                                    <a href="{% url 'event_detail' event.id %}" class="event-title-link">
-                                        {{ event.title }}
-                                    </a>
-                                </h5>
-                                <div class="text-muted">{{ event.event_date|date:"M d, Y" }}</div>
-                                <p>{{ event.description }}</p>
-                            </div>
-                            <div class="ms-3">
-                                <a href="{% url 'event_detail' event.id %}" class="btn btn-primary btn-sm">View Details</a>
+<div class="events-section" id="eventsSection">
+    {% if all_events %}
+        <h3>Upcoming Events</h3>
+    {% else %}
+        <p>No upcoming events available.</p>
+    {% endif %}
 
-                                {% if event.owner == request.user %}
-                                    <a href="{% url 'edit_event' event.id %}" class="btn btn-warning btn-sm">Edit</a>
-                                    <form method="POST" action="{% url 'delete_event' event.id %}" style="display:inline;">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                                    </form>
-                                {% endif %}
-                            </div>
-                        </div>
+    {% if all_events %}
+        {% for event in all_events %}
+            <div class="event-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1">
+                            <a href="{% url 'event_detail' event.id %}" class="event-title-link">
+                                {{ event.title }}
+                            </a>
+                        </h5>
+                        <div class="text-muted">{{ event.event_date|date:"M d, Y" }}</div>
+                        <p>{{ event.description }}</p>
                     </div>
-                {% endfor %}
-            {% else %}
-                <div class="alert alert-info">No events available.</div>
-            {% endif %}
-        </div>
-    </div>
+                    <div class="ms-3">
+                        <a href="{% url 'event_detail' event.id %}" class="btn btn-primary btn-sm">View Details</a>
+
+                        {% if event.owner == request.user %}
+                            <a href="{% url 'edit_event' event.id %}" class="btn btn-warning btn-sm">Edit</a>
+                            <form method="POST" action="{% url 'delete_event' event.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>

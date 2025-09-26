@@ -7,7 +7,7 @@ class EventForm(forms.ModelForm):
         model = Event
         fields = [
             'title', 'description', 'event_date', 'start_time', 'end_time',
-            'max_participants', 'meeting_link', 'registration_deadline'
+            'max_participants', 'meeting_link', 'registration_deadline',
         ]
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),

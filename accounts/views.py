@@ -8,7 +8,10 @@ from django.core.mail import send_mail
 from django.utils import timezone
 from .models import UserProfile, Event
 from .forms import EventForm
+from django.utils.timezone import now
+
 import random
+from django.core.mail import send_mail
 from django.http import JsonResponse
 from django.http import HttpResponseForbidden
 
@@ -23,26 +26,36 @@ def dashboard(request):
 
     if request.method == "POST":
         if form.is_valid():
-            event = form.save(commit=False)  # Don't save yet
-            event.owner = request.user       # Set owner before saving
-            event.save()                     # Now save
-            event.owners.add(request.user)   # Add to owners list
+            event = form.save(commit=False)      # Don't save yet
+            event.owner = request.user           # Assign owner
+            event.save()                         # Save event
+            event.owners.add(request.user)       # Add creator to owners
             messages.success(request, "Event created successfully.")
             return redirect('dashboard')
         else:
             print("Form errors:", form.errors)
 
-    all_events = Event.objects.exclude(owners=request.user).order_by('event_date')
+    # Only upcoming events (exclude past ones)
+    today = now().date()
 
-    # Ensure times are strings for display
+    all_events = Event.objects.filter(event_date__gte=today).exclude(owners=request.user).order_by('event_date')
+    my_events = Event.objects.filter(event_date__gte=today, owners=request.user).order_by('event_date')
+
+    # Add formatted time strings
     for event in all_events:
+        event.start_time_str = event.start_time.strftime("%H:%M") if event.start_time else None
+        event.end_time_str = event.end_time.strftime("%H:%M") if event.end_time else None
+
+    for event in my_events:
         event.start_time_str = event.start_time.strftime("%H:%M") if event.start_time else None
         event.end_time_str = event.end_time.strftime("%H:%M") if event.end_time else None
 
     return render(request, "accounts/dashboard.html", {
         "form": form,
-        "all_events": all_events
+        "all_events": all_events,
+        "my_events": my_events,
     })
+
 
 def add_event(request):
     if request.method == 'POST':
@@ -52,7 +65,22 @@ def add_event(request):
             event.created_by = request.user
             event.save()
             event.owners.add(request.user)
-            messages.success(request, "Event added successfully.")
+            
+            # Grab invitation emails entered as comma-separated values
+            invitation_emails = request.POST.get('invitation_emails', '')
+            emails = [email.strip() for email in invitation_emails.split(',') if email.strip()]
+            
+            subject = f"Invitation to event: {event.title}"
+            from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@yourdomain.com")
+            message = f"You are invited to the event '{event.title}' scheduled on {event.event_date}.\n\nDetails:\n{event.description}"
+            
+            for email in emails:
+                try:
+                    send_mail(subject, message, from_email, [email], fail_silently=True)
+                except Exception as e:
+                    print(f"Failed to send invite to {email}: {e}")
+            
+            messages.success(request, "Event added and invitations sent.")
             return redirect('my_events')
         else:
             print(form.errors)
@@ -60,37 +88,60 @@ def add_event(request):
         form = EventForm()
 
     return render(request, 'add_event.html', {'form': form})
-
-
 @login_required
 def register_event(request, event_id):
     event = get_object_or_404(Event, id=event_id)
     now = timezone.now()
 
     if request.method == "POST":
+        # Check deadline
         if event.registration_deadline and now > event.registration_deadline:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.accepts('application/json'):
                 return JsonResponse({'success': False, 'error': "Registration for this event is closed."})
             messages.error(request, "Registration for this event is closed.")
             return redirect('dashboard')
 
+        # Check max participants
         if event.max_participants is not None and event.registrants.count() >= event.max_participants:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.accepts('application/json'):
                 return JsonResponse({'success': False, 'error': "Registration limit reached for this event."})
             messages.error(request, "Registration limit reached for this event.")
             return redirect('dashboard')
 
-        # Add user to registrants only if not already registered
+        # Prevent duplicate registration
         if request.user not in event.registrants.all():
             event.registrants.add(request.user)
+
+         
+            # Email to participant
+            if request.user.email:
+                send_mail(
+                    subject=f"Registration Confirmed: {event.title}",
+                    message=f"You have successfully registered for {event.title}.\n"
+                            f"Event Date: {event.event_date}\n\nDetails: {event.description}",
+                    from_email="noreply@eventmanager.com",
+                    recipient_list=[request.user.email],
+                    fail_silently=True,
+                )
+
+            # Email to organiser(s)
+            organisers = [owner.email for owner in event.owners.all() if owner.email]
+            if organisers:
+                send_mail(
+                    subject=f"New Registration for {event.title}",
+                    message=f"{request.user.username} has registered for your event {event.title}.",
+                    from_email="noreply@eventmanager.com",
+                    recipient_list=organisers,
+                    fail_silently=True,
+                )
 
         if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.accepts('application/json'):
             return JsonResponse({'success': True})
 
-        messages.success(request, "Registered for event successfully.")
+        messages.success(request, "You have registered successfully.")
         return redirect('registration_success', event_id=event.id)
 
-    # For non-POST requests, redirect to event details
+    # Fallback for non-POST requests
     return redirect('event_detail', event_id=event.id)
 
 
