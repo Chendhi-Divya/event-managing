@@ -51,6 +51,15 @@
             <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
             {{ form.description|add_class:"form-control" }}
         </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="{{ form.invitation_emails.id_for_label }}">Invitation Emails</label>
+            {{ form.invitation_emails|add_class:"form-control" }}
+            <div class="form-text">{{ form.invitation_emails.help_text }}</div>
+        </div>
+
+
+
         
         <button type="submit" class="btn btn-primary w-100">Add Event</button>
     </form>

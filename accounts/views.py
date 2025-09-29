@@ -4,12 +4,11 @@ from django.contrib.auth import authenticate, login as auth_login, logout as aut
 from django.contrib import messages
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.core.mail import send_mail
 from django.utils import timezone
 from .models import UserProfile, Event
 from .forms import EventForm
 from django.utils.timezone import now
-
+from django.core.mail import get_connection, EmailMessage
 import random
 from django.core.mail import send_mail
 from django.http import JsonResponse
@@ -20,28 +19,97 @@ def home(request):
     return render(request, "home.html")
 
 
+# @login_required(login_url='/login/')
+# def dashboard(request):
+#     form = EventForm(request.POST or None)
+
+#     if request.method == "POST":
+#         if form.is_valid():
+#             event = form.save(commit=False)      # Don't save yet
+#             event.owner = request.user           # Assign owner
+#             event.save()                         # Save event
+#             event.owners.add(request.user)       # Add creator to owners
+#             messages.success(request, "Event created successfully.")
+#             return redirect('dashboard')
+#         else:
+#             print("Form errors:", form.errors)
+
+#     # Only upcoming events (exclude past ones)
+#     today = now().date()
+
+#     all_events = Event.objects.filter(event_date__gte=today).exclude(owners=request.user).order_by('event_date')
+#     my_events = Event.objects.filter(event_date__gte=today, owners=request.user).order_by('event_date')
+
+#     # Add formatted time strings
+#     for event in all_events:
+#         event.start_time_str = event.start_time.strftime("%H:%M") if event.start_time else None
+#         event.end_time_str = event.end_time.strftime("%H:%M") if event.end_time else None
+
+#     for event in my_events:
+#         event.start_time_str = event.start_time.strftime("%H:%M") if event.start_time else None
+#         event.end_time_str = event.end_time.strftime("%H:%M") if event.end_time else None
+
+#     return render(request, "accounts/dashboard.html", {
+#         "form": form,
+#         "all_events": all_events,
+#         "my_events": my_events,
+#     })
 @login_required(login_url='/login/')
 def dashboard(request):
     form = EventForm(request.POST or None)
 
     if request.method == "POST":
         if form.is_valid():
-            event = form.save(commit=False)      # Don't save yet
-            event.owner = request.user           # Assign owner
-            event.save()                         # Save event
-            event.owners.add(request.user)       # Add creator to owners
-            messages.success(request, "Event created successfully.")
+            # Save the event
+            event = form.save(commit=False)
+            event.owner = request.user
+            event.save()
+            event.owners.add(request.user)
+
+            # Extract invitation emails from form
+            invitation_emails = form.cleaned_data.get("invitation_emails", "")
+            emails = [email.strip() for email in invitation_emails.split(",") if email.strip()]
+
+            # 🔹 Print emails to console for debugging
+            print("Invitation Emails from frontend:", emails)
+
+            # Send invitation emails
+            if emails:
+                subject = f"Invitation to event: {event.title}"
+                message = (
+                    f"You are invited to the event '{event.title}' scheduled on {event.event_date}.\n\n"
+                    f"Details:\n{event.description}\n\n"
+                    f"Meeting Link: {event.meeting_link}"
+                )
+                from_email = getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)
+
+                try:
+                    connection = get_connection(fail_silently=False)
+                    email_messages = [
+                        EmailMessage(subject, message, from_email, [recipient])
+                        for recipient in emails
+                    ]
+                    result = connection.send_messages(email_messages)
+                    print("Email send result:", result)
+                    if result > 0:
+                        messages.success(request, "Event created and invitations sent.")
+                    else:
+                        messages.error(request, "Event created but emails could not be sent.")
+                except Exception as e:
+                    messages.error(request, f"Event created but failed to send invitations: {e}")
+            else:
+                messages.success(request, "Event created successfully.")
+
             return redirect('dashboard')
         else:
+            messages.error(request, "Form validation failed.")
             print("Form errors:", form.errors)
 
-    # Only upcoming events (exclude past ones)
+    # GET request — fetch upcoming events
     today = now().date()
-
     all_events = Event.objects.filter(event_date__gte=today).exclude(owners=request.user).order_by('event_date')
     my_events = Event.objects.filter(event_date__gte=today, owners=request.user).order_by('event_date')
 
-    # Add formatted time strings
     for event in all_events:
         event.start_time_str = event.start_time.strftime("%H:%M") if event.start_time else None
         event.end_time_str = event.end_time.strftime("%H:%M") if event.end_time else None
@@ -57,6 +125,7 @@ def dashboard(request):
     })
 
 
+@login_required
 def add_event(request):
     if request.method == 'POST':
         form = EventForm(request.POST)
@@ -65,29 +134,39 @@ def add_event(request):
             event.created_by = request.user
             event.save()
             event.owners.add(request.user)
-            
-            # Grab invitation emails entered as comma-separated values
-            invitation_emails = request.POST.get('invitation_emails', '')
+
+            invitation_emails = form.cleaned_data.get('invitation_emails', '')
             emails = [email.strip() for email in invitation_emails.split(',') if email.strip()]
-            
-            subject = f"Invitation to event: {event.title}"
-            from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@yourdomain.com")
-            message = f"You are invited to the event '{event.title}' scheduled on {event.event_date}.\n\nDetails:\n{event.description}"
-            
-            for email in emails:
+
+            if emails:
+                subject = f"Invitation to event: {event.title}"
+                message = (
+                    f"You are invited to the event '{event.title}' scheduled on {event.event_date}.\n\n"
+                    f"Details:\n{event.description}\n"
+                )
+                from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@yourdomain.com")
+
                 try:
-                    send_mail(subject, message, from_email, [email], fail_silently=True)
+                    connection = get_connection(fail_silently=False)
+                    email_messages = [
+                        EmailMessage(subject, message, from_email, [recipient])
+                        for recipient in emails
+                    ]
+                    connection.send_messages(email_messages)
                 except Exception as e:
-                    print(f"Failed to send invite to {email}: {e}")
-            
+                    print(f"Error sending invitations: {e}")
+                    messages.error(request, "Some invitations could not be sent. Please check the email addresses and SMTP settings.")
+
             messages.success(request, "Event added and invitations sent.")
             return redirect('my_events')
         else:
-            print(form.errors)
+            messages.error(request, "There was an error creating the event.")
     else:
         form = EventForm()
 
     return render(request, 'add_event.html', {'form': form})
+
+
 @login_required
 def register_event(request, event_id):
     event = get_object_or_404(Event, id=event_id)
