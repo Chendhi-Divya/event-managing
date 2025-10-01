@@ -52,43 +52,7 @@ def api_token_login(request):
             "email": user.email
         }
     })
-3.
-# @login_required(login_url='/login/')
-# def dashboard(request):
-#     form = EventForm(request.POST or None)
 
-#     if request.method == "POST":
-#         if form.is_valid():
-#             event = form.save(commit=False)      # Don't save yet
-#             event.owner = request.user           # Assign owner
-#             event.save()                         # Save event
-#             event.owners.add(request.user)       # Add creator to owners
-#             messages.success(request, "Event created successfully.")
-#             return redirect('dashboard')
-#         else:
-#             print("Form errors:", form.errors)
-
-#     # Only upcoming events (exclude past ones)
-#     today = now().date()
-
-#     all_events = Event.objects.filter(event_date__gte=today).exclude(owners=request.user).order_by('event_date')
-#     my_events = Event.objects.filter(event_date__gte=today, owners=request.user).order_by('event_date')
-
-#     # Add formatted time strings
-#     for event in all_events:
-#         event.start_time_str = event.start_time.strftime("%H:%M") if event.start_time else None
-#         event.end_time_str = event.end_time.strftime("%H:%M") if event.end_time else None
-
-#     for event in my_events:
-#         event.start_time_str = event.start_time.strftime("%H:%M") if event.start_time else None
-#         event.end_time_str = event.end_time.strftime("%H:%M") if event.end_time else None
-
-#     return render(request, "accounts/dashboard.html", {
-#         "form": form,
-#         "all_events": all_events,
-#         "my_events": my_events,
-#     })
-# @login_required(login_url='/login/')
 @jwt_required
 def dashboard(request):
     form = EventForm(request.POST or None)
@@ -114,6 +78,8 @@ def dashboard(request):
                 message = (
                     f"You are invited to the event '{event.title}' scheduled on {event.event_date}.\n\n"
                     f"Details:\n{event.description}\n\n"
+                    f"Start Time: {event.start_time}\n"
+                    f"End Time: {event.end_time}\n\n"
                     f"Meeting Link: {event.meeting_link}"
                 )
                 from_email = getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)
@@ -198,6 +164,7 @@ def add_event(request):
             messages.error(request, "There was an error creating the event.")
     else:
         form = EventForm()
+    
 
     return render(request, 'add_event.html', {'form': form})
 
@@ -243,8 +210,10 @@ def register_event(request, event_id):
             if organisers:
                 send_mail(
                     subject=f"New Registration for {event.title}",
-                    message=f"{request.user.username} has registered for your event {event.title}.",
-                    from_email="noreply@eventmanager.com",
+                     message=(
+                        f"{request.user.username} ({request.user.email}) has registered for your event {event.title}."
+                    ),
+                                from_email="noreply@eventmanager.com",
                     recipient_list=organisers,
                     fail_silently=True,
                 )
@@ -320,32 +289,6 @@ def signup(request):
     return render(request, "accounts/signup.html")
 
 
-# def verify_otp(request):
-#     user_data = request.session.get('signup_user')
-#     if not user_data:
-#         messages.error(request, "Session expired or invalid. Please sign up again.")
-#         return redirect('signup')
-
-#     registered_email = user_data.get('email', '')
-#     if request.method == "POST":
-#         entered_otp = ''.join([request.POST.get(f'otp{i}', '') for i in range(1, 7)])
-#         session_otp = request.session.get('signup_otp')
-
-#         if entered_otp == session_otp:
-#             user = User.objects.create_user(
-#                 username=user_data['username'],
-#                 email=user_data['email'],
-#                 password=user_data['password']
-#             )
-#             UserProfile.objects.create(user=user, plain_password=user_data['password'])
-#             del request.session['signup_otp']
-#             del request.session['signup_user']
-#             auth_login(request, user)
-#             messages.success(request, "Account verified! Welcome to your dashboard.")
-#             return redirect('dashboard')
-#         else:
-#             messages.error(request, "Invalid OTP. Please try again.")
-#     return render(request, "accounts/verify_otp.html", {"registered_email": registered_email})
 
 def verify_otp(request):
     user_data = request.session.get('signup_user')
@@ -393,37 +336,21 @@ def verify_otp(request):
 
     return render(request, "accounts/verify_otp.html", {"registered_email": registered_email})
 
-# def login_view(request):
-#     if request.method == "POST":
-#         email = request.POST.get("email")
-#         password = request.POST.get("password")
-#         try:
-#             user_obj = User.objects.get(email=email)
-#             username = user_obj.username
-#         except User.DoesNotExist:
-#             messages.error(request, "User does not exist, please sign in")
-#             return render(request, "accounts/login.html")
-#         user = authenticate(username=username, password=password)
-#         if user:
-#             auth_login(request, user)
-#             messages.success(request, f"Welcome back, {user.username}!")
-#             return redirect("dashboard")
-#         else:
-#             messages.error(request, "Invalid password, please try again.")
-#     return render(request, "accounts/login.html")
 def login_view(request):
     if request.method == "POST":
         email = request.POST.get("email")
         password = request.POST.get("password")
 
+        # Check if user exists
         try:
             user_obj = User.objects.get(email=email)
             username = user_obj.username
         except User.DoesNotExist:
-            messages.error(request, "User does not exist, please sign in")
+            messages.error(request, "User does not exist — please sign up.")
             return render(request, "accounts/login.html")
 
-        user = authenticate(username=username, password=password)
+        # Authenticate user
+        user = authenticate(request, username=username, password=password)
         if user:
             auth_login(request, user)
 
@@ -440,16 +367,15 @@ def login_view(request):
                 httponly=True,
                 secure=False,    # Change to True in production with HTTPS
                 samesite="Lax",
-                max_age=3600    # Can use "Strict" or "None"
+                max_age=3600
             )
 
             return response
         else:
-            messages.error(request, "Invalid password, please try again")
+            messages.error(request, "Invalid password, please try again.")
+            return render(request, "accounts/login.html")
 
     return render(request, "accounts/login.html")
-
-
 @login_required
 def logout_view(request):
     auth_logout(request)
@@ -498,8 +424,36 @@ def edit_event(request, event_id):
     if request.method == "POST":
         form = EventForm(request.POST, instance=event)
         if form.is_valid():
-            form.save()
+            updated_event = form.save()
+
+            # Get invitation emails as comma separated string from form
+            invitation_emails = form.cleaned_data.get('invitation_emails', '')
+            emails = [email.strip() for email in invitation_emails.split(',') if email.strip()]
+
+            if emails:
+                subject = f"Invitation to event: {updated_event.title}"
+                message = (
+                    f"You are invited to the event '{updated_event.title}' scheduled on {updated_event.event_date}.\n\n"
+                    f"Details:\n{updated_event.description}\n\n"
+                    f"Start Time: {updated_event.start_time}\n"
+                    f"End Time: {updated_event.end_time}\n\n"
+                    f"Meeting Link: {updated_event.meeting_link}"
+                )
+                from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', settings.EMAIL_HOST_USER)
+
+                try:
+                    connection = get_connection(fail_silently=False)
+                    email_messages = [EmailMessage(subject, message, from_email, [email]) for email in emails]
+                    connection.send_messages(email_messages)
+                    messages.success(request, "Event updated and invitations sent.")
+                except Exception as e:
+                    messages.error(request, f"Event updated but invitations failed to send: {e}")
+            else:
+                messages.success(request, "Event updated successfully.")
+
             return redirect('my_events')
+        else:
+            messages.error(request, "Form validation failed.")
     else:
         form = EventForm(instance=event)
 
@@ -511,3 +465,27 @@ def delete_event(request, event_id):
         event.delete()
         return redirect('my_events')
     return render(request, 'confirm_delete.html', {'event': event})
+
+@login_required
+def cancel_event(request, event_id):
+    event = get_object_or_404(Event, id=event_id, owner=request.user)
+    
+    # Update status
+    event.status = "Cancelled"
+    event.save()
+
+    # Get participants
+    participants = event.registrants.all()
+
+    # Send cancellation emails
+    for user in participants:
+        send_mail(
+            subject=f"Event Cancelled: {event.title}",
+            message=f"Dear {user.username},\n\nWe regret to inform you that the event '{event.title}' scheduled on {event.date} has been cancelled.\n\nRegards,\nEvent Manager",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=True,
+        )
+
+    messages.success(request, "Event has been cancelled and participants notified.")
+    return redirect("dashboard")  # or wherever you want

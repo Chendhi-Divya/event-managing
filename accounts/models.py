@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 class UserOTP(models.Model):
@@ -18,16 +19,25 @@ class UserProfile(models.Model):
     def __str__(self):
         return self.user.username
 
+
 class Event(models.Model):
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_events")  
+    STATUS_CHOICES = [
+        ("scheduled", "Scheduled"),
+        ("cancelled", "Cancelled"),
+    ]
+
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_events")
     owners = models.ManyToManyField(User, related_name="my_events", blank=True)
-    registrants = models.ManyToManyField(User, related_name="registered_events", blank=True)  # <-- Added
+    registrants = models.ManyToManyField(User, related_name="registered_events", blank=True)
+
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+
     event_date = models.DateField()
-    created_at = models.DateTimeField(auto_now_add=True)
     start_time = models.TimeField(null=True, blank=True)
     end_time = models.TimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
     max_participants = models.PositiveIntegerField(null=True, blank=True)
     meeting_link = models.URLField(blank=True)
     registration_deadline = models.DateTimeField(null=True, blank=True)
@@ -38,8 +48,20 @@ class Event(models.Model):
         help_text="Comma-separated email addresses for invitations"
     )
 
+    # New cancellation fields
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="scheduled")
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancel_reason = models.TextField(null=True, blank=True)
+
+    def mark_cancelled(self, reason=""):
+        """Mark the event as cancelled with optional reason"""
+        self.status = "cancelled"
+        self.cancelled_at = timezone.now()
+        self.cancel_reason = reason
+        self.save()
+
     def __str__(self):
-        return self.title
+        return f"{self.title} ({self.get_status_display()})"
 
     class Meta:
         ordering = ['event_date']

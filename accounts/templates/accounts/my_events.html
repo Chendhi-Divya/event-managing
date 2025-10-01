@@ -63,45 +63,54 @@
                             <h5 class="card-title">{{ event.title }}</h5>
                             <h6 class="card-subtitle mb-2 text-muted">{{ event.event_date|date:"M d, Y" }}</h6>
                             <p class="card-text">{{ event.description }}</p>
+                            <p>Status: 
+                                {% if event.status == "cancelled" %}
+                                    <span class="badge bg-danger">Cancelled</span>
+                                   
+                                    <span class="badge bg-success">Scheduled</span>
+                                {% endif %}
+                            </p>
                         </div>
 
                         <div class="mt-3 d-flex gap-2">
-                            <!-- Always visible -->
                             <a href="{% url 'event_detail' event.id %}" class="btn btn-primary btn-sm">View Event Details</a>
 
                             {% if request.user in event.owners.all %}
-                                <!-- Edit Event -->
                                 <a href="{% url 'edit_event' event.id %}" class="btn btn-warning btn-sm">Edit</a>
 
-                                <!-- Delete Event -->
                                 <form action="{% url 'delete_event' event.id %}" method="post" style="display:inline;">
                                     {% csrf_token %}
                                     <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal{{ event.id }}">
                                         Delete
                                     </button>
-                                    
-                           <!-- Delete Confirmation Modal -->
-                        <div class="modal fade" id="deleteModal{{ event.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ event.id }}" aria-hidden="true">
-                            <div class="modal-dialog">
-                                <div class="modal-content border-0"> <!-- Remove border for cleaner look -->
-                                    
-                                    <div class="modal-body">
-                                        Are you sure you want to delete the event "<strong>{{ event.title }}</strong>"?
-                                    </div>
+                                </form>
 
-                                    <div class="modal-footer border-0"> <!-- Remove footer border -->
-                                        <form action="{% url 'delete_event' event.id %}" method="post">
-                                            {% csrf_token %}
-                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                                            <button type="submit" class="btn btn-danger btn-sm">Yes, Delete</button>
-                                        </form>
-                                    </div>
+                                {% if event.status != "cancelled" %}
+                                    <form method="post" action="{% url 'cancel_event' event.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        
+                                        <button type="submit" class="btn btn-danger btn-sm">Cancel Event</button>
+                                    </form>
+                                {% endif %}
 
+                                <!-- Delete Confirmation Modal -->
+                                <div class="modal fade" id="deleteModal{{ event.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ event.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content border-0">
+                                            <div class="modal-body">
+                                                Are you sure you want to delete the event "<strong>{{ event.title }}</strong>"?
+                                            </div>
+                                            <div class="modal-footer border-0">
+                                                <form action="{% url 'delete_event' event.id %}" method="post">
+                                                    {% csrf_token %}
+                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                                    <button type="submit" class="btn btn-danger btn-sm">Yes, Delete</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-
-                                                    {% endif %}
+                            {% endif %}
                         </div>
                     </div>
                 </div>

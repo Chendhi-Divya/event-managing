@@ -14,8 +14,7 @@ urlpatterns = [
      path('registered-events/', views.registered_events, name='registered_events'),
      path('unregister-event/<int:event_id>/', views.unregister_event, name='unregister_event'),
      path('api/token-login/', views.api_token_login, name="api_token_login"),
-
-
+    
     # Event management URLs
     path('events/', views.event_list, name='event_list'),        # List of events
     path('events/<int:event_id>/', views.event_detail, name='event_detail'),  # Event detail
@@ -26,7 +25,7 @@ urlpatterns = [
      path('events/<int:event_id>/', views.event_detail, name='event_detail'),
       path('edit-event/<int:event_id>/', views.edit_event, name='edit_event'),
     path('delete-event/<int:event_id>/', views.delete_event, name='delete_event'),
-     
+      path('cancel-event/<int:event_id>/', views.cancel_event, name='cancel_event'),
 
     # Password reset URLs
     path("password-reset/",

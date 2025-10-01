@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-
+from .models import Event
 class SignupSerializer(serializers.Serializer):
     """
     Serializer for user signup with username, email, and password.
@@ -53,3 +53,7 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Account not activated. Verify email first.")
         attrs["user"] = user
         return attrs
+class EventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Event
+        fields = ["id", "title", "description", "event_date", "start_time", "status", "cancel_reason", "cancelled_at"]
