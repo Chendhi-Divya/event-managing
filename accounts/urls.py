@@ -13,7 +13,7 @@ urlpatterns = [
      path('add-event/', views.add_event, name='add_event'),
      path('registered-events/', views.registered_events, name='registered_events'),
      path('unregister-event/<int:event_id>/', views.unregister_event, name='unregister_event'),
-    
+     path('api/token-login/', views.api_token_login, name="api_token_login"),
 
 
     # Event management URLs

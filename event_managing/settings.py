@@ -83,6 +83,11 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
 }
+from datetime import timedelta
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=8),  # Adjust lifetime as needed
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
 
 # Login/Redirect URLs
 LOGIN_URL = "/login/"  # This fixes the @login_required redirect issue

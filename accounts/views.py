@@ -13,12 +13,46 @@ import random
 from django.core.mail import send_mail
 from django.http import JsonResponse
 from django.http import HttpResponseForbidden
-
-
+from rest_framework_simplejwt.tokens import RefreshToken
+import json
+from accounts.utils.jwt_auth import jwt_required
 def home(request):
     return render(request, "home.html")
 
+def api_token_login(request):
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed"}, status=405)
 
+    try:
+        body = json.loads(request.body)
+    except:
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+
+    email = body.get("email")
+    password = body.get("password")
+
+    try:
+        user_obj = User.objects.get(email=email)
+        username = user_obj.username
+    except User.DoesNotExist:
+        return JsonResponse({"detail": "User does not exist"}, status=400)
+
+    user = authenticate(username=username, password=password)
+    if not user:
+        return JsonResponse({"detail": "Invalid credentials"}, status=401)
+
+    refresh = RefreshToken.for_user(user)
+    access = str(refresh.access_token)
+
+    return JsonResponse({
+        "access": access,
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email
+        }
+    })
+3.
 # @login_required(login_url='/login/')
 # def dashboard(request):
 #     form = EventForm(request.POST or None)
@@ -54,7 +88,8 @@ def home(request):
 #         "all_events": all_events,
 #         "my_events": my_events,
 #     })
-@login_required(login_url='/login/')
+# @login_required(login_url='/login/')
+@jwt_required
 def dashboard(request):
     form = EventForm(request.POST or None)
 
@@ -285,6 +320,33 @@ def signup(request):
     return render(request, "accounts/signup.html")
 
 
+# def verify_otp(request):
+#     user_data = request.session.get('signup_user')
+#     if not user_data:
+#         messages.error(request, "Session expired or invalid. Please sign up again.")
+#         return redirect('signup')
+
+#     registered_email = user_data.get('email', '')
+#     if request.method == "POST":
+#         entered_otp = ''.join([request.POST.get(f'otp{i}', '') for i in range(1, 7)])
+#         session_otp = request.session.get('signup_otp')
+
+#         if entered_otp == session_otp:
+#             user = User.objects.create_user(
+#                 username=user_data['username'],
+#                 email=user_data['email'],
+#                 password=user_data['password']
+#             )
+#             UserProfile.objects.create(user=user, plain_password=user_data['password'])
+#             del request.session['signup_otp']
+#             del request.session['signup_user']
+#             auth_login(request, user)
+#             messages.success(request, "Account verified! Welcome to your dashboard.")
+#             return redirect('dashboard')
+#         else:
+#             messages.error(request, "Invalid OTP. Please try again.")
+#     return render(request, "accounts/verify_otp.html", {"registered_email": registered_email})
+
 def verify_otp(request):
     user_data = request.session.get('signup_user')
     if not user_data:
@@ -305,31 +367,86 @@ def verify_otp(request):
             UserProfile.objects.create(user=user, plain_password=user_data['password'])
             del request.session['signup_otp']
             del request.session['signup_user']
+
             auth_login(request, user)
+
+            # Generate JWT token
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+
+            response = redirect('dashboard')  # Redirect after OTP verification
+
+            # Set JWT in cookie
+            response.set_cookie(
+                key="jwt_token",
+                value=access_token,
+                httponly=True,
+                secure=False,    # Change to True in production with HTTPS
+                samesite="Lax",
+                max_age=3600 
+            )
+
             messages.success(request, "Account verified! Welcome to your dashboard.")
-            return redirect('dashboard')
+            return response
         else:
             messages.error(request, "Invalid OTP. Please try again.")
+
     return render(request, "accounts/verify_otp.html", {"registered_email": registered_email})
 
-
+# def login_view(request):
+#     if request.method == "POST":
+#         email = request.POST.get("email")
+#         password = request.POST.get("password")
+#         try:
+#             user_obj = User.objects.get(email=email)
+#             username = user_obj.username
+#         except User.DoesNotExist:
+#             messages.error(request, "User does not exist, please sign in")
+#             return render(request, "accounts/login.html")
+#         user = authenticate(username=username, password=password)
+#         if user:
+#             auth_login(request, user)
+#             messages.success(request, f"Welcome back, {user.username}!")
+#             return redirect("dashboard")
+#         else:
+#             messages.error(request, "Invalid password, please try again.")
+#     return render(request, "accounts/login.html")
 def login_view(request):
     if request.method == "POST":
         email = request.POST.get("email")
         password = request.POST.get("password")
+
         try:
             user_obj = User.objects.get(email=email)
             username = user_obj.username
         except User.DoesNotExist:
             messages.error(request, "User does not exist, please sign in")
             return render(request, "accounts/login.html")
+
         user = authenticate(username=username, password=password)
         if user:
             auth_login(request, user)
-            messages.success(request, f"Welcome back, {user.username}!")
-            return redirect("dashboard")
+
+            # Generate JWT token
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+
+            response = redirect("dashboard")  # Redirect after login
+
+            # Set JWT in cookie
+            response.set_cookie(
+                key="jwt_token",
+                value=access_token,
+                httponly=True,
+                secure=False,    # Change to True in production with HTTPS
+                samesite="Lax",
+                max_age=3600    # Can use "Strict" or "None"
+            )
+
+            return response
         else:
-            messages.error(request, "Invalid password, please try again.")
+            messages.error(request, "Invalid password, please try again")
+
     return render(request, "accounts/login.html")
 
 
