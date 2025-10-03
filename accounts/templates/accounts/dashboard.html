@@ -128,8 +128,8 @@
             {% endif %}
 
             {% for event in all_events %}
-                <div class="event-card">
-                    <div class="d-flex justify-content-between align-items-start">
+                <div class="event-card card mb-3">
+                    <div class="card-body d-flex justify-content-between align-items-start">
                         <div class="flex-grow-1">
                             <h5 class="mb-1">
                                 <a href="{% url 'event_detail' event.id %}" class="event-title-link">
@@ -138,30 +138,25 @@
                             </h5>
                             <div class="text-muted">{{ event.event_date|date:"M d, Y" }}</div>
                             <p>{{ event.description }}</p>
-                            <p>
-                                <strong>Status:</strong>
-                                {% if event.status == "cancelled" %}
-                                    <span class="badge bg-danger">Cancelled</span>
-                                {% else %}
-                                    <span class="badge bg-success">Scheduled</span>
-                                {% endif %}
-                            </p>
                         </div>
-                        <div class="ms-3">
-                            {% if event.is_registered %}
-                                <span class="badge bg-primary">Registered</span>
-                            {% else %}
-                                <a href="{% url 'event_detail' event.id %}" class="btn btn-primary btn-sm">View Details</a>
-                            {% endif %}
+                      <div class="ms-3 text-end">
+                        <a href="{% url 'event_detail' event.id %}" class="btn btn-primary btn-sm">View Details</a>
+                        <br>
+                        {% if request.user in event.registrants.all %}
+                            <span class="badge bg-success mt-2">Registered</span>
+                        {% endif %}
+                        {% if event.owner == request.user %}
+                            <a href="{% url 'edit_event' event.id %}" class="btn btn-warning btn-sm mt-2">Edit</a>
+                            <form method="POST" action="{% url 'delete_event' event.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-sm mt-2">Delete</button>
+                            </form>
+                        {% endif %}
+                    </div>
 
-                            {% if event.owner == request.user %}
-                                <a href="{% url 'edit_event' event.id %}" class="btn btn-warning btn-sm">Edit</a>
-                                <form method="POST" action="{% url 'delete_event' event.id %}" style="display:inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                                </form>
-                            {% endif %}
-                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <b>Status:</b> <span class="badge bg-success">Scheduled</span>
                     </div>
                 </div>
             {% endfor %}

@@ -468,8 +468,9 @@ def delete_event(request, event_id):
 
 @login_required
 def cancel_event(request, event_id):
-    event = get_object_or_404(Event, id=event_id, owner=request.user)
-    
+    # Ensure the event exists and the current user is an owner
+    event = get_object_or_404(Event, id=event_id, owners=request.user)
+
     # Update status
     event.status = "Cancelled"
     event.save()
@@ -479,13 +480,19 @@ def cancel_event(request, event_id):
 
     # Send cancellation emails
     for user in participants:
-        send_mail(
-            subject=f"Event Cancelled: {event.title}",
-            message=f"Dear {user.username},\n\nWe regret to inform you that the event '{event.title}' scheduled on {event.date} has been cancelled.\n\nRegards,\nEvent Manager",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=True,
-        )
+        if user.email:
+            send_mail(
+                subject=f"Event Cancelled: {event.title}",
+                message=(
+                    f"Dear {user.username},\n\n"
+                    f"We regret to inform you that the event '{event.title}' scheduled on "
+                    f"{event.event_date.strftime('%Y-%m-%d')} has been cancelled.\n\n"
+                    f"Regards,\nEvent Manager"
+                ),
+                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@eventmanager.com"),
+                recipient_list=[user.email],
+                fail_silently=True,
+            )
 
     messages.success(request, "Event has been cancelled and participants notified.")
-    return redirect("dashboard")  # or wherever you want
+    return redirect("dashboard")
